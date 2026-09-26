@@ -11,6 +11,6 @@ def main() -> None:
         print("Item not found!")
     else:
         data = response.json()
-        print("Lowest Ask:", data["data"]["sell"][1]["platinum"])
+        print("Lowest Ask:", data["data"]["sell"][0]["platinum"])
 
 main()
