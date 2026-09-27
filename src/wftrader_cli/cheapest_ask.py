@@ -11,11 +11,12 @@ def save_price(item: str, price: int):
                 price INTEGER,
                 date TIMESTAMP)''')
 
-    col = (item, price, datetime.datetime.now())
+    col = (item, price, datetime.datetime.now().isoformat())
     cur.execute("INSERT INTO cheapest VALUES(?, ?, ?)", col)
     con.commit()
 
     print(cur.execute("SELECT * FROM cheapest").fetchall())
+    con.close()
 
 def cheapestPrice(item: str) -> str:
     url = f"https://api.warframe.market/v2/orders/item/{item}/top"
