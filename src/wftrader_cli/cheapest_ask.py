@@ -3,7 +3,7 @@ import sqlite3
 import datetime
 
 def save_price(item: str, price: int):
-    con = sqlite3.connect("cheapest.db")
+    con = sqlite3.connect("data/cheapest.db")
     cur = con.cursor()
 
     cur.execute('''CREATE TABLE IF NOT EXISTS cheapest(
@@ -30,8 +30,10 @@ def cheapestPrice(item: str) -> str:
         return f"Lowest Ask: {data["data"]["sell"][0]["platinum"]}"
 
 def main() -> None:
-    if __name__ == "__main__":
-        itemName = input("Item Name: ").lower().strip().replace(" ", "_")
-        
-        print(cheapestPrice(itemName))
+    itemName = input("Item Name: ").lower().strip().replace(" ", "_")
+    
+    print(cheapestPrice(itemName))
+
+if __name__ == "__main__":
+    main()
 
