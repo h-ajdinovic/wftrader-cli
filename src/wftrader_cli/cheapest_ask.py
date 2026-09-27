@@ -29,9 +29,9 @@ def cheapestPrice(item: str) -> str:
         save_price(item, data["data"]["sell"][0]["platinum"])
         return f"Lowest Ask: {data["data"]["sell"][0]["platinum"]}"
 
-
-if __name__ == "__main__":
-    itemName = input("Item Name: ").lower().strip().replace(" ", "_")
-    
-    print(cheapestPrice(itemName))
+def main() -> None:
+    if __name__ == "__main__":
+        itemName = input("Item Name: ").lower().strip().replace(" ", "_")
+        
+        print(cheapestPrice(itemName))
 
