@@ -10,6 +10,10 @@ app = FastAPI()
 def readItem(item):
     return cheapestPrice(item)
 
+@app.get("/history/{item}")
+def readItem(item):
+    return history(item)
+
 def save_price(item: str, price: int):
     con = sqlite3.connect("data/cheapest.db")
     cur = con.cursor()
@@ -29,6 +33,18 @@ def save_price(item: str, price: int):
     con.close()
 
     return current_time
+
+def history(item):
+    con = sqlite3.connect("data/cheapest.db")
+    cur = con.cursor()
+
+    res = cur.execute("SELECT * FROM cheapest WHERE name = ?", (item,)).fetchall()
+    con.close()
+
+    return [
+        {"item name" : name, "price" : price, "date" : date} 
+        for name, price, date in res
+    ]
 
 def cheapestPrice(item: str) -> str:
     url = f"https://api.warframe.market/v2/orders/item/{item}/top"
