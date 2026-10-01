@@ -3,15 +3,23 @@ import sqlite3
 import datetime
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 app = FastAPI()
+
+app.mount("/static", StaticFiles(directory="src/wftrader_cli/static"), name="static")
+
+@app.get("/", response_class=FileResponse)
+def readMainPage():
+    return "src/wftrader_cli/static/index.html"
 
 @app.get("/price/{item}")
 def readItem(item):
     return cheapestPrice(item)
 
 @app.get("/history/{item}")
-def readItem(item):
+def readItemHistory(item):
     return history(item)
 
 def save_price(item: str, price: int):
@@ -42,7 +50,7 @@ def history(item):
     con.close()
 
     return [
-        {"item name" : name, "price" : price, "date" : date} 
+        {"item_name" : name, "price" : price, "date" : date} 
         for name, price, date in res
     ]
 
