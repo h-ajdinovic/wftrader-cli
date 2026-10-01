@@ -11,3 +11,8 @@ wheels/
 
 # Databases
 *.db
+
+# Claude-Related
+CLAUDE.md
+LEARNINGS.md
+.claude/
