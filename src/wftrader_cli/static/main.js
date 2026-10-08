@@ -9,6 +9,7 @@ searchItemInput.addEventListener("keydown", async (event) => {
 
         const response = await fetch(url);
         if (!response.ok) {
+            document.getElementById('itemDiv').textContent = `Invalid Input! (Response: ${response.status})`;
             throw new Error(`Response status: ${response.status}`);
         } 
 
@@ -24,6 +25,7 @@ searchHistoryInput.addEventListener("keydown", async (event) => {
 
         const response = await fetch(url);
         if (!response.ok) {
+            document.getElementById('historyDiv').textContent = `Invalid Input! (Response: ${response.status})`;
             throw new Error(`Response status: ${response.status}`);
         }
 

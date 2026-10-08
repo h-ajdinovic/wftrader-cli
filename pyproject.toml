@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-wftrader-cli = "wftrader_cli.cheapest_ask:main"
+wftrader-cli = "wftrader_cli.api:main"
 
 [build-system]
 requires = ["uv_build>=0.12.19,<0.13.0"]
