@@ -11,5 +11,8 @@ def getTopOrdersData(item: str) -> tuple:
         return None
     else:
         data = response.json()
-        price = data["data"]["sell"][0]["platinum"]
+        try:
+            price = data["data"]["sell"][0]["platinum"]
+        except IndexError: 
+            return None # return None if there is no sell order
         return item, price, timestamp

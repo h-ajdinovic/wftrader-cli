@@ -28,7 +28,7 @@ def readItem(item):
 
 @app.get("/history/{item}")
 def readItemHistory(item):
-    return db.history(item)
+    return db.pullHistoryData(item)
 
 def cheapestPrice(item: str) -> str:
     data = market.getTopOrdersData(item)
