@@ -36,11 +36,11 @@ def cheapestPrice(item: str) -> str:
     if data is None:
         raise HTTPException(status_code = 404)
     else:
-        db.insertItemData(data)
+        db.insertItemData(data[0], data[1], data[2])
         return {"item_name" : data[0], "price" : data[1], "date" : data[2]}
 
 def main() -> None:
-    uvicorn.run("wftrader_cli.cheapest_ask:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("wftrader_cli.api:app", host="127.0.0.1", port=8000, reload=True)
 
 if __name__ == "__main__":
     main()
