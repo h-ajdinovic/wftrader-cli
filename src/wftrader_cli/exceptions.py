@@ -6,3 +6,6 @@ class MarketUnavailableException(Exception):
 
 class NotInWatchlistException(Exception):
     pass
+
+class NoSellOrdersFoundException(Exception):
+    pass

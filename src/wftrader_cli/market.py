@@ -23,7 +23,10 @@ def getTopOrderData(item: str) -> tuple:
         raise MarketUnavailableException(f"Server Error: status {code}")
 
     data = response.json()
-    price = data["data"]["sell"][0]["platinum"]
+    try:
+        price = data["data"]["sell"][0]["platinum"]
+    except IndexError:
+        raise NoSellOrdersFoundException(f'No sell orders were found for "{item}"')
     return item, price, timestamp
 
 def slugCheck(item: str) -> bool:
