@@ -1,36 +1,53 @@
 import requests
+import logging
 from datetime import datetime, UTC
 
-def getTopOrdersData(item: str) -> tuple:
+from wftrader_cli.exceptions import *
+
+
+logger = logging.getLogger(__name__)
+
+def getTopOrderData(item: str) -> tuple:
     url = f"https://api.warframe.market/v2/orders/item/{item}/top"
 
-    response = requests.get(url)
-    timestamp = datetime.now(UTC).isoformat(timespec="minutes")
+    try:
+        response = requests.get(url, timeout=1)
+        timestamp = datetime.now(UTC).isoformat(timespec="minutes")
+    except requests.exceptions.RequestException as e:
+        raise MarketUnavailableException(f"Request failed: {e}") from e
 
-    if response.status_code != 200:
-        return None
-    else:
-        data = response.json()
-        try:
-            price = data["data"]["sell"][0]["platinum"]
-        except IndexError: 
-            return None # return None if there is no sell order
-        return item, price, timestamp
+    code = response.status_code
+    if code == 404:
+        raise ItemNotFoundException(f'Item "{item}" has no orders or does not exist!')
+    elif code in (429, 509) or code >= 500:
+        raise MarketUnavailableException(f"Server Error: status {code}")
+
+    data = response.json()
+    price = data["data"]["sell"][0]["platinum"]
+    return item, price, timestamp
 
 def slugCheck(item: str) -> bool:
     url = f"https://api.warframe.market/v2/item/{item}"
 
-    response = requests.get(url)
-    data = response.json()
+    try:
+        response = requests.get(url, timeout=1)
+    except requests.exceptions.RequestException as e:
+        raise MarketUnavailableException(f"Request failed: {e}") from e
+    code = response.status_code
 
-    if (data["error"] is None):
-        return True
+    if code in (429, 509) or code >= 500:
+        raise MarketUnavailableException(f"Server Error: status {code}")
+    elif code == 404:
+        raise ItemNotFoundException(f"Item {item} does not exist!")
 
-    return False
+    return True
 
+    
 if __name__ == "__main__":
     falseresponse = requests.get("https://api.warframe.market/v2/item/sluuhhh")
     trueresponse = requests.get("https://api.warframe.market/v2/item/shred")
 
-    print(trueresponse.json())
-    print(falseresponse.json())
+    print(trueresponse.status_code)
+    #print(trueresponse.json())
+    print(falseresponse.status_code)
+    #print(falseresponse.json())
