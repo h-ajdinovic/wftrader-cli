@@ -38,11 +38,11 @@ searchHistoryInput.addEventListener("keydown", async (event) => {
 addWatchlistInput.addEventListener("keydown", async (event) => {
     if(event.key === "Enter") {
         const userInput = addWatchlistInput.value;
-        const url = "/addWL/";
+        const url = "/watchlist/";
 
         const response = await fetch(url, {
-            headers: {"Content-Type": "application/json"}, 
             method: "POST",
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({slug: userInput})
         });
         if (!response.ok) {
@@ -57,12 +57,12 @@ addWatchlistInput.addEventListener("keydown", async (event) => {
 delWatchlistInput.addEventListener("keydown", async (event) => {
     if(event.key === "Enter") {
         const userInput = delWatchlistInput.value;
-        const url = "/deleteWL/";
+        const url = "/watchlist/" + userInput;
 
         const response = await fetch(url, {
-            headers: {"Content-Type": "application/json"}, 
             method: "DELETE",
-            body: JSON.stringify({slug: userInput})
+            headers: {"Content-Type": "text/plain"},
+            body: userInput
         });
         if (!response.ok) {
             document.getElementById('watchlistResponseDiv').textContent = `Invalid Input! (Response: ${response.status})`;

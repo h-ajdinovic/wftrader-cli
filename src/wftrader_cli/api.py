@@ -64,16 +64,16 @@ def readMainPage():
 def readWatchlist():
     return db.fetchWatchlist()
 
-@app.post("/addWL/")
+@app.post("/watchlist/")
 def postWatchlist(item: Slug):
     market.slugCheck(item.slug)
 
     db.insertIntoWatchlist(item.slug)
     return item
 
-@app.delete("/deleteWL/")
-def deleteWatchlist(item: Slug):
-    db.deleteFromWatchlist(item.slug)
+@app.delete("/watchlist/{item}")
+def deleteWatchlist(item: str):
+    db.deleteFromWatchlist(item)
     return item
 
 @app.get("/price/{item}")
