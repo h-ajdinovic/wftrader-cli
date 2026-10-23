@@ -1,6 +1,7 @@
 import logging
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import uvicorn
@@ -18,6 +19,10 @@ from wftrader_cli.exceptions import (
     NotInWatchlistError,
 )
 
+CURRENT_DIR = Path(__file__).resolve().parent
+
+STATIC_DIR = CURRENT_DIR / "static"
+INDEX_FILE = STATIC_DIR / "index.html"
 
 class WatchlistRequest(BaseModel):
     slug: str
@@ -32,14 +37,14 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     db.init()
     tracker = BackgroundScheduler()
-    tracker.add_job(track_watchlist, "cron", minute="*/1")
+    tracker.add_job(track_watchlist, "cron", minute="*/10")
     tracker.start()
     yield
     tracker.shutdown()
 
 app = FastAPI(lifespan=lifespan)
 
-app.mount("/static", StaticFiles(directory="src/wftrader_cli/static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.exception_handler(MarketUnavailableError)
 def exc_market_unavailable(request: Request, exc: MarketUnavailableError) -> JSONResponse:
@@ -63,11 +68,11 @@ def exc_no_sell_orders(request: Request, exc: NoSellOrdersFoundError) -> JSONRes
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-  return FileResponse("src/wftrader_cli/static/favicon.ico")
+  return FileResponse(STATIC_DIR / "favicon.ico")
 
 @app.get("/", response_class=FileResponse)
 def show_main_page() -> FileResponse:
-    return FileResponse("src/wftrader_cli/static/index.html")
+    return FileResponse(STATIC_DIR / "index.html")
 
 @app.get("/watchlist/")
 def get_watchlist() -> dict[str, Any]:

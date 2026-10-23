@@ -48,13 +48,3 @@ def check_slug(slug: str) -> bool:
         raise ItemNotFoundError(f"Item {slug} does not exist!")
 
     return True
-
-    
-if __name__ == "__main__":
-    falseresponse = requests.get("https://api.warframe.market/v2/item/sluuhhh")
-    trueresponse = requests.get("https://api.warframe.market/v2/item/shred")
-
-    print(trueresponse.status_code)
-    #print(trueresponse.json())
-    print(falseresponse.status_code)
-    #print(falseresponse.json())
