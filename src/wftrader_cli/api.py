@@ -58,12 +58,14 @@ def exc_no_sell_orders(_request: Request, exc: NoSellOrdersFoundException):
 
 @app.get("/", response_class=FileResponse)
 def readMainPage():
-    # logger.info('GET Request: "/"')
     return "src/wftrader_cli/static/index.html"
+
+@app.get("/watchlist/")
+def readWatchlist():
+    return db.fetchWatchlist()
 
 @app.post("/addWL/")
 def postWatchlist(item: Slug):
-    # logger.info('POST Request: "/addWL/%s', item.slug)
     market.slugCheck(item.slug)
 
     db.insertIntoWatchlist(item.slug)
@@ -71,18 +73,15 @@ def postWatchlist(item: Slug):
 
 @app.delete("/deleteWL/")
 def deleteWatchlist(item: Slug):
-    # logger.info('DELETE Request: "/deleteWL/%s', item.slug)
     db.deleteFromWatchlist(item.slug)
     return item
 
 @app.get("/price/{item}")
 def readItem(item):
-    # logger.info('GET Request: "/price/%s', item)
     return cheapestPrice(item)
 
 @app.get("/history/{item}")
-def readItemHistory(item):
-    # logger.info('GET Request: "/history/%s', item)
+def readItemHistory(item): 
     return db.pullHistoryData(item)
 
 def cheapestPrice(item: str) -> str:
