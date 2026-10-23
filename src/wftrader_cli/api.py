@@ -1,20 +1,25 @@
-from contextlib import asynccontextmanager
-from datetime import datetime, UTC
-import time
 import logging
+import time
+from contextlib import asynccontextmanager
+from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
 from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
-import wftrader_cli.db as db
-import wftrader_cli.market as market
-from wftrader_cli.exceptions import *
+from wftrader_cli import db, market
+from wftrader_cli.exceptions import (
+    ItemNotFoundError,
+    MarketUnavailableError,
+    NoSellOrdersFoundError,
+    NotInWatchlistError,
+)
 
-class Slug(BaseModel):
+
+class WatchlistRequest(BaseModel):
     slug: str
 
 logging.basicConfig(
@@ -27,7 +32,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     db.init()
     tracker = BackgroundScheduler()
-    tracker.add_job(watchlistLoop, "cron", minute="*/1")
+    tracker.add_job(track_watchlist, "cron", minute="*/1")
     tracker.start()
     yield
     tracker.shutdown()
@@ -36,69 +41,74 @@ app = FastAPI(lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="src/wftrader_cli/static"), name="static")
 
-@app.exception_handler(MarketUnavailableException)
-def exc_market_unavailable(_request: Request, exc: MarketUnavailableException):
-    logger.warning("MarketUnavailableException (Code 504) for %s with message: %s", str(_request.url) + _request.url.path, str(exc))
+@app.exception_handler(MarketUnavailableError)
+def exc_market_unavailable(request: Request, exc: MarketUnavailableError) -> JSONResponse:
+    logger.warning("MarketUnavailableError (Code 504) for %s with message: %s", str(request.url) + request.url.path, str(exc))
     return JSONResponse(status_code=504, content={"detail": "warframe.market is unavailable, try again later!"})
 
-@app.exception_handler(ItemNotFoundException)
-def exc_item_not_found(_request: Request, exc: ItemNotFoundException):
-    logger.warning("ItemNotFoundException (Code 404) for %s with message: %s", str(_request.url) + _request.url.path, str(exc))
+@app.exception_handler(ItemNotFoundError)
+def exc_item_not_found(request: Request, exc: ItemNotFoundError) -> JSONResponse:
+    logger.warning("ItemNotFoundError (Code 404) for %s with message: %s", str(request.url) + request.url.path, str(exc))
     return JSONResponse(status_code=404, content={"detail": str(exc)})
 
-@app.exception_handler(NotInWatchlistException)
-def exc_not_in_watchlist(_request: Request, exc: NotInWatchlistException):
-    logger.warning("NotInWatchlistException (Code 404) for %s with message: %s", str(_request.url) + _request.url.path, str(exc))
+@app.exception_handler(NotInWatchlistError)
+def exc_not_in_watchlist(request: Request, exc: NotInWatchlistError) -> JSONResponse:
+    logger.warning("NotInWatchlistError (Code 404) for %s with message: %s", str(request.url) + request.url.path, str(exc))
     return JSONResponse(status_code=404, content={"detail": str(exc)})
 
-@app.exception_handler(NoSellOrdersFoundException)
-def exc_no_sell_orders(_request: Request, exc: NoSellOrdersFoundException):
-    logger.warning("NoSellOrdersFoundException (Code 404) for %s with message: %s", str(_request.url) + _request.url.path, str(exc))
+@app.exception_handler(NoSellOrdersFoundError)
+def exc_no_sell_orders(request: Request, exc: NoSellOrdersFoundError) -> JSONResponse:
+    logger.warning("NoSellOrdersFoundError (Code 404) for %s with message: %s", str(request.url) + request.url.path, str(exc))
     return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+  return FileResponse("src/wftrader_cli/static/favicon.ico")
 
 @app.get("/", response_class=FileResponse)
-def readMainPage():
-    return "src/wftrader_cli/static/index.html"
+def show_main_page() -> FileResponse:
+    return FileResponse("src/wftrader_cli/static/index.html")
 
 @app.get("/watchlist/")
-def readWatchlist():
-    return db.fetchWatchlist()
+def get_watchlist() -> dict[str, Any]:
+    return db.get_watchlist()
 
-@app.post("/watchlist/")
-def postWatchlist(item: Slug):
-    market.slugCheck(item.slug)
+@app.post("/watchlist/", response_model=WatchlistRequest)
+def add_to_watchlist(model: WatchlistRequest) -> WatchlistRequest:
+    slug = model.slug
+    market.check_slug(slug)
 
-    db.insertIntoWatchlist(item.slug)
-    return item
+    db.add_watchlist_item(slug)
+    return model
 
-@app.delete("/watchlist/{item}")
-def deleteWatchlist(item: str):
-    db.deleteFromWatchlist(item)
-    return item
+@app.delete("/watchlist/{slug}", response_class=PlainTextResponse)
+def delete_from_watchlist(slug: str) -> str:
+    db.remove_watchlist_item(slug)
+    return slug
 
-@app.get("/price/{item}")
-def readItem(item):
-    return cheapestPrice(item)
+@app.get("/price/{slug}", response_class=PlainTextResponse)
+def get_price(slug: str) -> str:
+    return get_cheapest_price(slug)
 
-@app.get("/history/{item}")
-def readItemHistory(item): 
-    return db.pullHistoryData(item)
+@app.get("/history/{slug}", response_class=PlainTextResponse)
+def get_price_history(slug: str) -> str: 
+    return db.get_history(slug)
 
-def cheapestPrice(item: str) -> str:
-    data = market.getTopOrderData(item)
-    db.insertItemData(data)
-    return {"item_name" : data[0], "price" : data[1], "date" : data[2]}
+def get_cheapest_price(slug: str) -> dict[str, Any]:
+    (slug, price, timestamp) = market.fetch_top_order(slug)
+    db.save_price((slug, price, timestamp))
+    return {"slug" : slug, "price" : price, "date" : timestamp}
 
-def watchlistLoop():
+def track_watchlist():
     start = time.time()
-    watchlist = db.fetchWatchlist()
+    watchlist = db.get_watchlist()
     failed = 0
 
     for slug in watchlist:
         try:
-            data = market.getTopOrderData(slug)
-            db.insertItemData(data)
-        except MarketUnavailableException as e:
+            data = market.fetch_top_order(slug)
+            db.save_price(data)
+        except MarketUnavailableError as e:
             failed += 1
             logger.warning("market unavailable for %s: %s", slug, e)
         except Exception:
@@ -107,7 +117,7 @@ def watchlistLoop():
 
     end = time.time()
 
-    logger.info("watchlist run done in %d seconds: %d items, %d failed", end-start, len(watchlist), failed, end-start)
+    logger.info("watchlist run done in %d seconds: %d items, %d failed", end-start, len(watchlist), failed)
     
     
 

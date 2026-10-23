@@ -1,11 +1,11 @@
-class ItemNotFoundException(Exception):
+class ItemNotFoundError(Exception):
     pass
 
-class MarketUnavailableException(Exception):
+class MarketUnavailableError(Exception):
     pass
 
-class NotInWatchlistException(Exception):
+class NotInWatchlistError(Exception):
     pass
 
-class NoSellOrdersFoundException(Exception):
+class NoSellOrdersFoundError(Exception):
     pass

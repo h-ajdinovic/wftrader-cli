@@ -1,47 +1,51 @@
-import requests
 import logging
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
-from wftrader_cli.exceptions import *
+import requests
 
+from wftrader_cli.exceptions import (
+    ItemNotFoundError,
+    MarketUnavailableError,
+    NoSellOrdersFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
-def getTopOrderData(item: str) -> tuple:
-    url = f"https://api.warframe.market/v2/orders/item/{item}/top"
+def fetch_top_order(slug: str) -> tuple:
+    url = f"https://api.warframe.market/v2/orders/item/{slug}/top"
 
     try:
         response = requests.get(url, timeout=1)
         timestamp = datetime.now(UTC).isoformat(timespec="minutes")
     except requests.exceptions.RequestException as e:
-        raise MarketUnavailableException(f"Request failed: {e}") from e
+        raise MarketUnavailableError(f"Request failed: {e}") from e
 
     code = response.status_code
     if code == 404:
-        raise ItemNotFoundException(f'Item "{item}" has no orders or does not exist!')
+        raise ItemNotFoundError(f'Item "{slug}" has no orders or does not exist!')
     elif code in (429, 509) or code >= 500:
-        raise MarketUnavailableException(f"Server Error: status {code}")
+        raise MarketUnavailableError(f"Server Error: status {code}")
 
-    data = response.json()
+    order = response.json()
     try:
-        price = data["data"]["sell"][0]["platinum"]
+        price = order["data"]["sell"][0]["platinum"]
     except IndexError:
-        raise NoSellOrdersFoundException(f'No sell orders were found for "{item}"')
-    return item, price, timestamp
+        raise NoSellOrdersFoundError(f'No sell orders were found for "{slug}"')
+    return (slug, price, timestamp)
 
-def slugCheck(item: str) -> bool:
-    url = f"https://api.warframe.market/v2/item/{item}"
+def check_slug(slug: str) -> bool:
+    url = f"https://api.warframe.market/v2/item/{slug}"
 
     try:
         response = requests.get(url, timeout=1)
-    except requests.exceptions.RequestException as e:
-        raise MarketUnavailableException(f"Request failed: {e}") from e
+    except requests.exceptions.RequestException as exc:
+        raise MarketUnavailableError(f"Request failed: {exc}") from exc
     code = response.status_code
 
     if code in (429, 509) or code >= 500:
-        raise MarketUnavailableException(f"Server Error: status {code}")
+        raise MarketUnavailableError(f"Server Error: status {code}")
     elif code == 404:
-        raise ItemNotFoundException(f"Item {item} does not exist!")
+        raise ItemNotFoundError(f"Item {slug} does not exist!")
 
     return True
 
